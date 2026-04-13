@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <meta name="description" content="A responsive task manager web application with add, delete, and complete task functionality.">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-shell">
+        <header class="app-header">
+            <p class="eyebrow">Task manager</p>
+            <h1>Daily Task List</h1>
+            <p class="intro">Add new tasks, mark them complete, and remove items with an accessible responsive interface.</p>
+            <div class="header-actions">
+                <button type="button" id="theme-toggle" class="btn theme-toggle" aria-pressed="false">Switch to dark mode</button>
+            </div>
+        </header>
+
+        <main>
+            <section class="task-creator" aria-labelledby="task-form-label">
+                <h2 id="task-form-label" class="sr-only">Add a new task</h2>
+                <form id="task-form">
+                    <div class="field-group">
+                        <label for="task-input">Task description</label>
+                        <input id="task-input" name="task" type="text" placeholder="What do you want to do?" autocomplete="off" required aria-describedby="task-error">
+                        <p id="task-error" class="error-message" aria-live="polite"></p>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add task</button>
+                </form>
+            </section>
+
+            <section class="task-list-section" aria-labelledby="task-list-heading">
+                <div class="task-list-header">
+                    <h2 id="task-list-heading">Tasks</h2>
+                    <p id="task-summary" class="task-summary">No tasks yet</p>
+                </div>
+                <div class="filter-group" role="group" aria-label="Filter tasks">
+                    <button type="button" class="btn filter-btn active" data-filter="all">All</button>
+                    <button type="button" class="btn filter-btn" data-filter="pending">Pending</button>
+                    <button type="button" class="btn filter-btn" data-filter="completed">Completed</button>
+                </div>
+                <ul id="tasks" class="task-list" aria-live="polite"></ul>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js" defer></script>
+</body>
+</html>
