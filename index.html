@@ -14,7 +14,8 @@
             <h1>Daily Task List</h1>
             <p class="intro">Add new tasks, mark them complete, and remove items with an accessible responsive interface.</p>
             <div class="header-actions">
-                <button type="button" id="theme-toggle" class="btn theme-toggle" aria-pressed="false">Switch to dark mode</button>
+                <button type="button" id="export-tasks" class="btn btn-secondary">Export to Excel</button>
+                <button type="button" id="theme-toggle" class="btn theme-toggle" aria-pressed="false" aria-label="Switch to dark mode">☀️</button>
             </div>
         </header>
 
@@ -26,6 +27,11 @@
                         <label for="task-input">Task description</label>
                         <input id="task-input" name="task" type="text" placeholder="What do you want to do?" autocomplete="off" required aria-describedby="task-error">
                         <p id="task-error" class="error-message" aria-live="polite"></p>
+                    </div>
+                    <div class="field-group">
+                        <label for="task-deadline">Complete by</label>
+                        <input id="task-deadline" name="deadline" type="datetime-local" required aria-describedby="deadline-error">
+                        <p id="deadline-error" class="error-message" aria-live="polite"></p>
                     </div>
                     <button type="submit" class="btn btn-primary">Add task</button>
                 </form>
@@ -44,6 +50,15 @@
                 <ul id="tasks" class="task-list" aria-live="polite"></ul>
             </section>
         </main>
+    </div>
+
+    <div id="reminder-popup" class="reminder-popup hidden" role="alertdialog" aria-modal="true" aria-labelledby="reminder-title" aria-describedby="reminder-message">
+        <div class="reminder-panel">
+            <h3 id="reminder-title">Reminder</h3>
+            <p id="reminder-message">One or more tasks are overdue.</p>
+            <ul id="reminder-list" class="reminder-list"></ul>
+            <button type="button" id="reminder-close" class="btn btn-primary">Dismiss</button>
+        </div>
     </div>
 
     <script src="script.js" defer></script>

@@ -3,7 +3,14 @@ const taskInput = document.getElementById('task-input');
 const taskError = document.getElementById('task-error');
 const taskList = document.getElementById('tasks');
 const taskSummary = document.getElementById('task-summary');
+const taskDeadline = document.getElementById('task-deadline');
+const deadlineError = document.getElementById('deadline-error');
+const reminderPopup = document.getElementById('reminder-popup');
+const reminderMessage = document.getElementById('reminder-message');
+const reminderList = document.getElementById('reminder-list');
+const reminderClose = document.getElementById('reminder-close');
 const themeToggle = document.getElementById('theme-toggle');
+const exportTasksButton = document.getElementById('export-tasks');
 const filterButtons = document.querySelectorAll('.filter-btn');
 let currentFilter = 'all';
 let currentTheme = 'light';
@@ -18,7 +25,8 @@ const saveTheme = (theme) => {
 
 const applyTheme = (theme) => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
-    themeToggle.textContent = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+    themeToggle.textContent = theme === 'dark' ? '🌙' : '☀️';
+    themeToggle.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
     themeToggle.setAttribute('aria-pressed', theme === 'dark');
 };
 
@@ -26,6 +34,32 @@ const toggleTheme = () => {
     currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
     applyTheme(currentTheme);
     saveTheme(currentTheme);
+};
+
+const exportTasksToExcel = () => {
+    if (tasks.length === 0) {
+        alert('There are no tasks to export.');
+        return;
+    }
+
+    const headers = ['Task', 'Completed', 'Due date'];
+    const csvRows = tasks.map((task) => {
+        const text = `"${task.text.replace(/"/g, '""')}"`;
+        const completed = task.completed ? 'Yes' : 'No';
+        const dueDate = task.dueAt ? `"${formatDueDate(task.dueAt).replace(/"/g, '""')}"` : '';
+        return `${text},${completed},${dueDate}`;
+    });
+
+    const csvContent = [headers.join(','), ...csvRows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'task-list.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 };
 
 const loadTasks = () => {
@@ -69,6 +103,52 @@ const setValidationMessage = (message) => {
     taskError.textContent = message;
 };
 
+const setDeadlineValidationMessage = (message) => {
+    const isInvalid = Boolean(message);
+    taskDeadline.setAttribute('aria-invalid', isInvalid ? 'true' : 'false');
+    deadlineError.textContent = message;
+};
+
+const formatDueDate = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    return new Intl.DateTimeFormat(navigator.language, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+    }).format(date);
+};
+
+const getExpiredTasks = () => {
+    const now = new Date();
+    return tasks.filter((task) => !task.completed && task.dueAt && new Date(task.dueAt) < now);
+};
+
+const showReminderPopup = () => {
+    const expired = getExpiredTasks();
+    if (expired.length === 0) {
+        hideReminderPopup();
+        return;
+    }
+
+    reminderMessage.textContent = expired.length === 1
+        ? 'One task has passed its deadline.'
+        : `${expired.length} tasks have passed their deadline.`;
+
+    reminderList.innerHTML = expired
+        .map((task) => `<li>${task.text} — due ${formatDueDate(task.dueAt)}</li>`)
+        .join('');
+
+    reminderPopup.classList.remove('hidden');
+};
+
+const hideReminderPopup = () => {
+    reminderPopup.classList.add('hidden');
+};
+
 const setFilter = (filter) => {
     currentFilter = filter;
     filterButtons.forEach((button) => {
@@ -102,6 +182,13 @@ const createTaskMarkup = (task, index) => {
     labelContainer.appendChild(checkboxWrapper);
     labelContainer.appendChild(text);
 
+    if (task.dueAt) {
+        const dueDate = document.createElement('p');
+        dueDate.className = 'task-due';
+        dueDate.textContent = `Due ${formatDueDate(task.dueAt)}`;
+        labelContainer.appendChild(dueDate);
+    }
+
     const deleteButton = document.createElement('button');
     deleteButton.type = 'button';
     deleteButton.className = 'delete-button';
@@ -125,6 +212,7 @@ const renderTasks = () => {
         emptyMessage.style.fontStyle = 'italic';
         taskList.appendChild(emptyMessage);
         updateSummary();
+        showReminderPopup();
         return;
     }
 
@@ -135,6 +223,7 @@ const renderTasks = () => {
         emptyMessage.style.fontStyle = 'italic';
         taskList.appendChild(emptyMessage);
         updateSummary();
+        showReminderPopup();
         return;
     }
 
@@ -144,9 +233,10 @@ const renderTasks = () => {
     });
 
     updateSummary();
+    showReminderPopup();
 };
 
-const addTask = (text) => {
+const addTask = (text, deadline) => {
     const cleanText = normalizeTaskText(text);
     if (!cleanText) {
         setValidationMessage('Please enter a task before adding.');
@@ -154,11 +244,26 @@ const addTask = (text) => {
         return;
     }
 
-    tasks.unshift({ text: cleanText, completed: false });
+    if (!deadline) {
+        setDeadlineValidationMessage('Please choose a due date and time.');
+        taskDeadline.focus();
+        return;
+    }
+
+    const dueDate = new Date(deadline);
+    if (Number.isNaN(dueDate.getTime())) {
+        setDeadlineValidationMessage('Please enter a valid date and time.');
+        taskDeadline.focus();
+        return;
+    }
+
+    tasks.unshift({ text: cleanText, completed: false, dueAt: deadline });
     saveTasks(tasks);
     setValidationMessage('');
+    setDeadlineValidationMessage('');
     renderTasks();
     taskInput.value = '';
+    taskDeadline.value = '';
     taskInput.focus();
 };
 
@@ -176,7 +281,7 @@ const deleteTask = (index) => {
 
 taskForm.addEventListener('submit', (event) => {
     event.preventDefault();
-    addTask(taskInput.value);
+    addTask(taskInput.value, taskDeadline.value);
 });
 
 taskInput.addEventListener('input', () => {
@@ -184,6 +289,14 @@ taskInput.addEventListener('input', () => {
         setValidationMessage('');
     }
 });
+
+taskDeadline.addEventListener('input', () => {
+    if (taskDeadline.value) {
+        setDeadlineValidationMessage('');
+    }
+});
+
+reminderClose.addEventListener('click', hideReminderPopup);
 
 taskList.addEventListener('click', (event) => {
     if (!event.target.matches('.delete-button')) return;
@@ -214,6 +327,8 @@ window.addEventListener('DOMContentLoaded', () => {
     applyTheme(currentTheme);
     renderTasks();
     setFilter(currentFilter);
+    setInterval(showReminderPopup, 60_000);
 });
 
 themeToggle.addEventListener('click', toggleTheme);
+exportTasksButton.addEventListener('click', exportTasksToExcel);
